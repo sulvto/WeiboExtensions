@@ -81,7 +81,7 @@ window.attemptedLoads = 0;
 
 function sendActive(data) {
     chrome.runtime.sendMessage({
-        event: 'spider.active',
+        event: window.site_spider_active_event_id,
         data: data,
         taskId: window.site_spider_task_id
     });
@@ -119,7 +119,7 @@ function finish(){
         // sendNextPageCall();
     // } else {
         chrome.runtime.sendMessage({
-            event: 'spider.done',
+            event: window.site_spider_done_event_id,
             taskId: window.site_spider_task_id
         });
     // }

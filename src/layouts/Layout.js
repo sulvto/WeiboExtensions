@@ -4,7 +4,8 @@ import {Layout as ALayout} from 'antd';
 import Header from './Header'
 import Home from '../containers/Home'
 import My from '../containers/My'
-import Target from '../containers/Target'
+import Profile from '../containers/Profile'
+import Detail from '../containers/Detail'
 import Graph from '../containers/Graph'
 import Follow from '../containers/Follow'
 import MyFollow from '../containers/MyFollow'
@@ -21,7 +22,8 @@ export default class Layout extends Component {
                     <Switch>
                         <Route path='/' component={Home} exact />
                         <Route path='/my' component={My} />
-                        <Route path='/target' component={Target} />
+                        <Route path='/profile' component={Profile} />
+                        <Route path='/detail' component={Detail} />
                         <Route path='/myfollow' component={MyFollow} />
                         <Route path='/follow/:uid/:name' component={Follow} />
                         <Route path='/graph/:uid/:name' component={Graph} />

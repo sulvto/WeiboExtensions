@@ -30,8 +30,8 @@ export default class Header extends Component {
                     <Menu.Item key="myfollow">
                         <Link to="/myfollow">MyFollow</Link>
                     </Menu.Item>
-                    <Menu.Item key="target">
-                        <Link to="/target">Target</Link>
+                    <Menu.Item key="profile">
+                        <Link to="/profile">Profile</Link>
                     </Menu.Item>
                 </Menu>
             </ALayout.Header>

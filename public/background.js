@@ -150,38 +150,28 @@ EventListenerList.prototype.add = function(listener) {
     this.list[this.length++] = listener;
 }
 
-EventListenerList.prototype.addListener = function(taskId, type, call) {
-    this.add(new Event(taskId, type, call));
+EventListenerList.prototype.addListener = function(name, call) {
+    this.add(new EventListener(name, call));
 }
 
-EventListenerList.prototype.removeListener = function(taskId, type) {
-    this.list = this.list.filter(function(item) { return item.taskId === taskId && item.type === type });
+EventListenerList.prototype.removeListener = function(name) {
+    this.list = this.list.filter(function(item) { return item.name === name });
     this.length = this.list.length;
 }
 
-EventListenerList.prototype.forEachListener = function(taskId, type, fun) {
-    this.list.filter(function(item) { return item.taskId === taskId && item.type === type }).forEach(fun)
+EventListenerList.prototype.forEachListener = function(name, fun) {
+    this.list.filter(function(item) { return item.name === name }).forEach(fun)
 }
 
-function EventListener(taskId, type, call) {
-    this.type = type;
-    this.taskId = taskId;
+function EventListener(name, call) {
+    this.name = name;
     this.call = call || function() {};
 }
 
 EventListener.prototype.eq = function(that) {
-    return this.type === that.type && this.taskId === that.taskId;
+    return this.name = that.name;
 }
 
-function Event(taskId, type, call) {
-    this.type = type;
-    this.taskId = taskId;
-    this.call = call || function() {};
-}
-
-Event.prototype.eq = function(that) {
-    return this.type === that.type && that.taskId === that.taskId;
-}
 
 function Job() {
     this.id = new Date().getTime();
@@ -599,8 +589,12 @@ function spiderLoadCallback_(task, injectFile) {
     if (!spiderTab || !spiderTab.id) {
         console.error(!spiderTab || !spiderTab.id);
     } else {
+        var executeCode = 'window.site_spider_task_id="' + task.id + '";' 
+                        + 'window.site_spider_call_name="' + task.callName + '";'
+                        + 'window.site_spider_active_event_id="' + task.activeEventId + '";'
+                        + 'window.site_spider_done_event_id="' + task.doneEventId + '";';
         chrome.tabs.executeScript(spiderTab.id, {
-            code: 'window.site_spider_task_id="' + task.id + '"'
+            code: executeCode
         });
     
         chrome.tabs.executeScript(spiderTab.id, {
@@ -798,83 +792,111 @@ function getFilePath(path) {
     return arr.join("/");
 }
 
+function spiderLoadBaseCallFun(url, spiderFile) {
+    var that = this;
+    var task = this.task;
+    task.callName = this.name;
+    task.activeEventId = `spider.active.${task.id}.${this.params.uid}`;
+    task.doneEventId = `spider.done.${task.id}.${this.params.uid}`;
+    spiderLoad(task, url, spiderFile);
+
+    var data = []
+    event_listeners.addListener(task.activeEventId, function(request) {
+        console.log('call spider.active count->', data.length);
+        if (request.data) {
+            data = data.concat(request.data);
+        }
+        removeTab(task.spiderTab.id);
+    });
+
+    event_listeners.addListener(task.doneEventId, function(request) {
+        console.log('call spider.myfollow callback', data);
+        that.callback(data);
+        event_listeners.removeListener(task.activeEventId);
+        event_listeners.removeListener(task.doneEventId);
+    });
+}
+
 function createSpiderMyfollowCall() {
     return {
+        name: CALL_NAME_SPIDER_MYFOLLOW,
         task: null,
         params: null,
         callback: null,
         fun: function() {
-            var that = this;
-            spiderLoad(this.task, this.params.url || `https://weibo.com/p/${this.params.uid}/myfollow`, 'spider/weiboMyfollow.js');
-
-            var data = []
-            event_listeners.addListener(this.task.id, 'spider.active', function(request) {
-                console.log('call spider.active');
-                if (request.data) {
-                    data = data.concat(request.data)
-                }
-                removeTab(that.task.spiderTab.id)
-            });
-
-            event_listeners.addListener(this.task.id, 'spider.done', function(request) {
-                console.log('call spider.myfollow callback', data);
-                that.callback(data);
-                event_listeners.removeListener(that.task.id, 'spider.done');
-            });
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/p/${this.params.uid}/myfollow`, 'spider/weiboMyfollow.js');
         }
     }
 }
 
 function createSpiderFollowCall() {
     return {
+        name: CALL_NAME_SPIDER_FOLLOW,
         task: null,
         params: null,
         callback: null,
         fun: function() {
-            var that = this;
-            spiderLoad(this.task, this.params.url || `https://weibo.com/${this.params.uid}/follow?refer=usercard&wvr=5&from=usercardnew`, 'spider/weiboFollow.js');
-
-            var data = []
-            event_listeners.addListener(this.task.id, 'spider.active', function(request) {
-                console.log('call spider.active count->', data.length);
-                if (request.data) {
-                    data = data.concat(request.data);
-                }
-                removeTab(that.task.spiderTab.id);
-            });
-
-            event_listeners.addListener(this.task.id, 'spider.done', function(request) {
-                console.log('call spider.follow callback', data);
-                that.callback(data);
-                event_listeners.removeListener(that.task.id, 'spider.active');
-                event_listeners.removeListener(that.task.id, 'spider.done');
-            });
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/${this.params.uid}/follow?refer=usercard&wvr=5&from=usercardnew`, 'spider/weiboFollow.js');
         }
     };
 }
 
-function createSpiderTargetCall() {
+function createSpiderProfileCall() {
     return {
+        name: CALL_NAME_SPIDER_PROFILE,
         task: null,
         params: null,
         callback: null,
         fun: function() {
-            var that = this;
-            spiderLoad(this.task, this.params.url || `https://weibo.com/${this.params.uid}`, 'spider/weiboTarget.js');
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/u/${this.params.uid}`, 'spider/weiboProfile.js');
+        }
+    };
+}
 
-            var data = []
-            event_listeners.addListener(this.task.id, 'spider.active', function(request) {
-                console.log('call spider.active count->', data.length);
-                if (request.data) {
-                    data = data.concat(request.data)
-                }
-                removeTab(that.task.spiderTab.id)
-            });
+function createSpiderDetailCall() {
+    return {
+        name: CALL_NAME_SPIDER_DETAIL,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/${this.params.uid}/${this.params.rid}`, 'spider/weiboDetail.js');
+        }
+    };
+}
 
-            event_listeners.addListener(this.task.id, 'spider.done', function(request) {
-                console.log('call spider.target callback', data);
-                that.callback(data);
-            });
+function createSpiderDetailRepostCall() {
+    return {
+        name: CALL_NAME_SPIDER_DETAIL_REPOST,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/${this.params.uid}/${this.params.rid}?type=repost`, 'spider/weiboDetailRepost.js');
+        }
+    };
+}
+
+function createSpiderDetailCommentCall() {
+    return {
+        name: CALL_NAME_SPIDER_DETAIL_COMMENT,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/${this.params.uid}/${this.params.rid}?type=comment`, 'spider/weiboDetailComment.js');
+        }
+    };
+}
+
+function createSpiderDetailLikeCall() {
+    return {
+        name: CALL_NAME_SPIDER_DETAIL_LIKE,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/${this.params.uid}/${this.params.rid}?type=like`, 'spider/weiboDetailLike.js');
         }
     };
 }
@@ -884,6 +906,7 @@ function createWeiboMyfollowTask() {
     tasks.add(task);
 
     return {
+        name: CALL_NAME_TASK_WEIBO_MYFOLLOW,
         task: null,
         params: null,
         callback: null,
@@ -898,6 +921,7 @@ function createWeiboFollowTask() {
     tasks.add(task);
 
     return {
+        name: CALL_NAME_TASK_WEIBO_FOLLOW,
         task: null,
         params: null,
         callback: null,
@@ -907,22 +931,84 @@ function createWeiboFollowTask() {
     }
 }
 
-function createWeiboTargetTask() {
+function createWeiboProfileTask() {
     var task = new Task(0);
     tasks.add(task);
 
     return {
+        name: CALL_NAME_TASK_WEIBO_PROFILE,
         task: null,
         params: null,
         callback: null,
         fun: function() {
-            callRequest(CALL_NAME_SPIDER_TARGET, task, { uid: this.params.uid }, this.callback);
+            callRequest(CALL_NAME_SPIDER_PROFILE, task, { uid: this.params.uid }, this.callback);
+        }
+    }
+}
+
+function createWeiboDetailTask() {
+    var task = new Task(0);
+    tasks.add(task);
+
+    return {
+        name: CALL_NAME_TASK_WEIBO_DETAIL,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            callRequest(CALL_NAME_SPIDER_DETAIL, task, { uid: this.params.uid }, this.callback);
+        }
+    }
+}
+
+function createWeiboDetailRepostTask() {
+    var task = new Task(0);
+    tasks.add(task);
+
+    return {
+        name: CALL_NAME_TASK_WEIBO_DETAIL_REPOST,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            callRequest(CALL_NAME_SPIDER_DETAIL_REPOST, task, { uid: this.params.uid }, this.callback);
+        }
+    }
+}
+
+function createWeiboDetailCommentTask() {
+    var task = new Task(0);
+    tasks.add(task);
+
+    return {
+        name: CALL_NAME_TASK_WEIBO_DETAIL_COMMENT,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            callRequest(CALL_NAME_SPIDER_DETAIL_COMMENT, task, { uid: this.params.uid }, this.callback);
+        }
+    }
+}
+
+function createWeiboDetailLikeTask() {
+    var task = new Task(0);
+    tasks.add(task);
+
+    return {
+        name: CALL_NAME_TASK_WEIBO_DETAIL_LIKE,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            callRequest(CALL_NAME_SPIDER_DETAIL_LIKE, task, { uid: this.params.uid }, this.callback);
         }
     }
 }
 
 function createCachePutCall() {
     return {
+        name: CALL_NAME_CACHE_PUT,
         task: null,
         params: null,
         callback: null,
@@ -934,6 +1020,7 @@ function createCachePutCall() {
 
 function createCacheGetCall() {
     return {
+        name: CALL_NAME_CACHE_GET,
         task: null,
         params: null,
         callback: null,
@@ -968,7 +1055,7 @@ function callRequest(name, task, params, callback) {
  */
 function eventRequest(request) {
     console.log('eventRequest', arguments);
-    event_listeners.forEachListener(request.taskId, request.event, function(listener) {
+    event_listeners.forEachListener(request.event, function(listener) {
         listener.call(request);
     })
 }
@@ -1053,9 +1140,19 @@ var CALL_TABLES = {}
 
 CALL_TABLES[CALL_NAME_SPIDER_MYFOLLOW] = createSpiderMyfollowCall();
 CALL_TABLES[CALL_NAME_SPIDER_FOLLOW] = createSpiderFollowCall();
-CALL_TABLES[CALL_NAME_SPIDER_TARGET] = createSpiderTargetCall();
+CALL_TABLES[CALL_NAME_SPIDER_PROFILE] = createSpiderProfileCall();
+CALL_TABLES[CALL_NAME_SPIDER_DETAIL] = createSpiderDetailCall();
+CALL_TABLES[CALL_NAME_SPIDER_DETAIL_REPOST] = createSpiderDetailRepostCall();
+CALL_TABLES[CALL_NAME_SPIDER_DETAIL_COMMENT] = createSpiderDetailCommentCall();
+CALL_TABLES[CALL_NAME_SPIDER_DETAIL_LIKE] = createSpiderDetailLikeCall();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_MYFOLLOW] = createWeiboMyfollowTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_FOLLOW] = createWeiboFollowTask();
-CALL_TABLES[CALL_NAME_TASK_WEIBO_TARGET] = createWeiboTargetTask();
+CALL_TABLES[CALL_NAME_TASK_WEIBO_MYFOLLOW] = createWeiboMyfollowTask();
+CALL_TABLES[CALL_NAME_TASK_WEIBO_PROFILE] = createWeiboProfileTask();
+CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL] = createWeiboDetailTask();
+CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_REPOST] = createWeiboDetailRepostTask();
+CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_COMMENT] = createWeiboDetailCommentTask();
+CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_LIKE] = createWeiboDetailLikeTask();
+
 CALL_TABLES[CALL_NAME_CACHE_GET] = createCacheGetCall();
 CALL_TABLES[CALL_NAME_CACHE_PUT] = createCachePutCall();

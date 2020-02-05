@@ -3,33 +3,37 @@
 var baseUrl = 'https://weibo.com';
 
 /**
- * 提取关注人基本信息
+ * 提取微博列表内容
  * @param {Document} node 
  */
 function get_node_result(node) {
     if (!node) return null;
-    var nameNode = node.querySelector('.follow_item .mod_pic > a');
-    var introNode = node.querySelector('.follow_item .mod_info > .info_intro span');
-    var picNode = node.querySelector('.follow_item .mod_pic > a > img');
-    var fromNode = node.querySelector('.follow_item .mod_info > .info_from a[class=from]');
-    var usercard = picNode ? picNode.getAttribute('usercard') : '=';
-
+    var dateNode = node.querySelector('div.WB_detail div.WB_from [node-type=feed_list_item_date]');
+    var expandANode = node.querySelector('div.WB_detail div.WB_feed_expand div.WB_func div.WB_from a[node-type=feed_list_item_date]');
+    var contentNode = node.querySelector('div.WB_detail div.WB_text[node-type=feed_list_content]');
+    var fromNode = node.querySelector('div.WB_detail div.WB_from [action-type=app_source]');
+    var forwardNode = node.querySelector('div.WB_feed_handle > div.WB_handle li span[node-type=forward_btn_text] em:last-child');
+    var commentNode = node.querySelector('div.WB_feed_handle > div.WB_handle li span[node-type=comment_btn_text] em:last-child');
+    var likeNode = node.querySelector('div.WB_feed_handle > div.WB_handle li span[node-type=like_status] em:last-child');
     return {
-        name: nameNode ? nameNode.getAttribute('title') : '',
-        url: nameNode ? baseUrl + nameNode.getAttribute('href') : '',
-        intro : introNode ? introNode.innerText : '',
-        pic: picNode ? picNode.getAttribute('src') : '',
+        date: dateNode ? dateNode.getAttribute('title') : '',
+        url: dateNode ? baseUrl + dateNode.getAttribute('href') : '',
+        feedContent : contentNode ? contentNode.innerHTML : '',
+        expandUrl: expandANode ? baseUrl + expandANode.getAttribute('href') : null,
         from: fromNode ? fromNode.innerText : '',
-        uid: usercard ? usercard.match('id=([^\&]+)\&')[1] : ''
+        forward: forwardNode ? forwardNode.innerText : '',
+        comment: commentNode ? commentNode.innerText : '',
+        like: likeNode ? likeNode.innerText : ''
     }
 }
 
-function has_follow_node() {
-    return get_follow_list_node() != null;
+
+function has_feed_node() {
+    return get_feed_node() != null;
 }
 
-function get_follow_list_node() {
-    var ulNode = document.body.querySelector('div.follow_box > div.follow_inner > ul.follow_list');
+function get_feed_node() {
+    var ulNode = document.body.querySelector('div.WB_feed[node-type=feed_list]');
     if (ulNode) {
         return ulNode.children
     } else {
@@ -37,17 +41,20 @@ function get_follow_list_node() {
     }
 }
 
-function get_page_follow() {
-    // follow nodes
-    var nodes = get_follow_list_node();
+function get_page_feed() {
+    // feel nodes
+    var nodes = get_feed_node();
 
     
     var results = [];
     for (var index = 0; index < nodes.length; index++) {
-        results[index] = get_node_result(nodes[index])
+        let node = nodes[index];
+        if (node.hasAttribute('action-type') && !node.querySelector('div.WB_cardtitle_b')) {
+            results[results.length] = get_node_result(node)
+        }
     }
 
-    console.log('weiboMyfollow.js get_page_follow', results);
+    console.log('weiboTarget.js get_page_feed', results);
     return results.filter(function(item) { return item != null });
 }
 
@@ -62,14 +69,13 @@ function get_next_page_url() {
 }
 
 function has_next_page() {
-    // TODO: ??
-    return false;
+    return next_page_node();
 }
 
 
 function reload() {
     chrome.runtime.sendMessage({
-        call: 'spider.follow',
+        call: window.site_spider_call_name,
         params: {
             url: window.location.href
         },
@@ -96,17 +102,18 @@ function finish(){
         return;
     }
 
-    if (!has_follow_node()) {
+    if (!has_feed_node()) {
         sendActive();
         reload();
         return;
     }
 
-    console.log('weiboFollow.js finish');
+    console.log('weiboProfile.js finish');
 
-    sendActive(get_page_follow());
+    sendActive(get_page_feed());
 
     if (has_next_page()) {
+        // TODO: ??
         chrome.runtime.sendMessage({
             call: 'spider.follow',
             params: {
