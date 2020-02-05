@@ -4,6 +4,7 @@ import { follow } from '../services/spiderApi';
 
 export default class Graph extends PureComponent {
     state = {
+        showPic: false,
         uid: null,
         option: {},
         fetchLevelCount: 0,
@@ -27,45 +28,49 @@ export default class Graph extends PureComponent {
         // dataSource.nodes[0].x = myChart.getWidth() / 2;
         // dataSource.nodes[0].y = myChart.getHeight() / 2;
     console.log(this);
+    var that = this;
         return {
-        legend: {
-            data: ['HTMLElement', 'WebGL', 'SVG', 'CSS', 'Other']
-        },
-        series: [{
-            type: 'graph',
-            layout: 'force',
-            animation: false,
-            label: {
-                show: true,
-                normal: {
-                    position: 'right',
-                    formatter: '{b}'
-                }
+            legend: {
+                data: categories.map(function (a) {
+                    return a.name;
+                })
             },
-            draggable: true,
-            focusNodeAdjacency: true,
-            force: {
-            // initLayout: 'circular'
-            repulsion: 500,
-            edgeLength: 250,
-            //   repulsion: 20,
-            //   gravity: 0.2
-            },
-            edgeSymbol: ['', 'arrow'],
-            data: nodes.map((node, idx) => {
-                node.id = node.uid;
-                node.symbolSize = 40;
-                node.label = {
-                    show: node.symbolSize > 30
-                };
-                if (node.pic && node.pic.length > 0) {
-                    node.symbol = `image://${node.pic}`;
-                }
-                return node;
-            }),
-            categories: categories,
-            edges: links,
-        }]
+            series: [{
+                type: 'graph',
+                layout: 'force',
+                animation: false,
+                label: {
+                    show: true,
+                    normal: {
+                        position: 'right',
+                        formatter: '{b}'
+                    }
+                },
+                draggable: true,
+                focusNodeAdjacency: true,
+                force: {
+                // initLayout: 'circular'
+                repulsion: 500,
+                edgeLength: 250,
+                //   repulsion: 20,
+                //   gravity: 0.2
+                },
+                roam: true,
+                edgeSymbol: ['', 'arrow'],
+                data: nodes.map((node, idx) => {
+                    node.id = node.uid;
+                    node.symbolSize = 40;
+                    node.label = {
+                        show: node.symbolSize > 30
+                    };
+                    if (that.state.showPic && node.pic && node.pic.length > 0) {
+                        node.symbol = `image://${node.pic}`;
+                    }
+                    return node;
+                }),
+                categories: categories,
+                edges: links,
+            }]
         };
     };
 
@@ -156,9 +161,9 @@ export default class Graph extends PureComponent {
     };
 
     componentDidMount() {
-    this.buildCoreNodeData();
-    this.incFetchLevelCount();
-    this.fetchDataSource(this.state.uid);
+        this.buildCoreNodeData();
+        this.incFetchLevelCount();
+        this.fetchDataSource(this.state.uid);
     };
 
   render() {

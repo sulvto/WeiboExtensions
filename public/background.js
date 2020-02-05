@@ -921,6 +921,28 @@ function createWeiboTargetTask() {
     }
 }
 
+function createCachePutCall() {
+    return {
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            CACHE.put(this.params.key, this.params.value, this.params.timeout);
+        }
+    }
+}
+
+function createCacheGetCall() {
+    return {
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            this.callback(CACHE.get(this.params.key));
+        }
+    }
+}
+
 /**
  * 
  * @param {string} name 
@@ -1035,3 +1057,5 @@ CALL_TABLES[CALL_NAME_SPIDER_TARGET] = createSpiderTargetCall();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_MYFOLLOW] = createWeiboMyfollowTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_FOLLOW] = createWeiboFollowTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_TARGET] = createWeiboTargetTask();
+CALL_TABLES[CALL_NAME_CACHE_GET] = createCacheGetCall();
+CALL_TABLES[CALL_NAME_CACHE_PUT] = createCachePutCall();
