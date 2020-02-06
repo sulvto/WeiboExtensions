@@ -1,5 +1,4 @@
 
-
 var baseUrl = 'https://weibo.com';
 
 function has_feed_node() {

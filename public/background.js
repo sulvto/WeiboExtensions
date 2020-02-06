@@ -130,15 +130,22 @@ function trimAfter(string, sep) {
 
 function Tasks() {
     this.list = [];
-    this.length = 0;
 }
 
 Tasks.prototype.add = function(task) {
-    this.list[this.length++] = task;
+    this.list[this.list.length++] = task;
 }
 
 Tasks.prototype.find = function(id) {
     return this.list.find(function(item) { return item.id === id})
+}
+
+Tasks.prototype.all = function() {
+    return this.list;
+}
+
+Tasks.prototype.remove = function(id) {
+    this.list = this.list.filter(function(item) { return item.id !== id});
 }
 
 function EventListenerList() {
@@ -224,8 +231,8 @@ Job.prototype.removeAllTask = function () {
     this.tasks = [];
 };
 
-function Task(jobId) {
-    return {id: genTaskId(), createDate: new Date(), jobId: jobId}
+function Task(name) {
+    return {id: genTaskId(), createDate: new Date(), name}
 }
 
 function getTask(taskId) {
@@ -961,6 +968,29 @@ function createWeiboDetailTask() {
     }
 }
 
+function createInervalWeiboDetailTask() {
+
+    return {
+        name: CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL,
+        task: null,
+        params: null,
+        callback: null,
+        taskFun: () => {
+            var that = this;
+            var task = this.task;
+            this.task.intervalID = setInterval(()=> {
+                callRequest(CALL_NAME_SPIDER_DETAIL, task, { uid: this.params.uid }, that.callback);
+            }, this.params.delay);
+        },
+        fun: function() {
+            var task = new Task(0);
+            tasks.add(task);
+            this.task = task;
+            this.taskFun();
+        }
+    }
+}
+
 function createWeiboDetailRepostTask() {
     var task = new Task(0);
     tasks.add(task);
@@ -1002,6 +1032,45 @@ function createWeiboDetailLikeTask() {
         callback: null,
         fun: function() {
             callRequest(CALL_NAME_SPIDER_DETAIL_LIKE, task, { uid: this.params.uid }, this.callback);
+        }
+    }
+}
+
+function createTaskListCall() {
+    return {
+        name: CALL_NAME_TASK_MANAGE_LIST,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            this.callback(tasks.all());
+        }
+    }
+}
+
+function createTaskStopCall() {
+    return {
+        name: CALL_NAME_TASK_MANAGE_STOP,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            // tasks.find(this.params.id); 
+            // TODO: stop
+            this.callback(true);
+        }
+    }
+}
+
+function createTaskRemoveCall() {
+    return {
+        name: CALL_NAME_TASK_MANAGE_REMOVE,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            tasks.remove(this.params.id);
+            this.callback(true);
         }
     }
 }
@@ -1150,9 +1219,14 @@ CALL_TABLES[CALL_NAME_TASK_WEIBO_FOLLOW] = createWeiboFollowTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_MYFOLLOW] = createWeiboMyfollowTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_PROFILE] = createWeiboProfileTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL] = createWeiboDetailTask();
+CALL_TABLES[CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL] = createInervalWeiboDetailTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_REPOST] = createWeiboDetailRepostTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_COMMENT] = createWeiboDetailCommentTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_LIKE] = createWeiboDetailLikeTask();
+
+CALL_TABLES[CALL_NAME_TASK_MANAGE_LIST] = createTaskListCall();
+CALL_TABLES[CALL_NAME_TASK_MANAGE_STOP] = createTaskStopCall();
+CALL_TABLES[CALL_NAME_TASK_MANAGE_REMOVE] = createTaskRemoveCall();
 
 CALL_TABLES[CALL_NAME_CACHE_GET] = createCacheGetCall();
 CALL_TABLES[CALL_NAME_CACHE_PUT] = createCachePutCall();

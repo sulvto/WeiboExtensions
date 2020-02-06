@@ -1,28 +1,6 @@
-function sendCallMessage(name, params, callback) {
-    window.chrome.runtime.sendMessage({
-        call: name,
-        params
-     }, callback);
-}
 
-function getCache(key, callback, loader) {
-    sendCallMessage('cache.get', {key}, function(value) {
-        if (value) {
-            callback(value);
-        } else if (loader) {
-            loader(function(data) {
-                callback(data);
-                putCache(key, data);
-            })
-        } else {
-            callback(null);
-        }
-    })
-}
-
-function putCache(key, value) {
-    sendCallMessage('cache.put', {key, value});
-}
+import { sendCallMessage } from './common'
+import { getCache } from './cacheApi'
 
 export function myfollow(uid, callback) {
     getCache(`task.weibo.myfollow.${uid}`, callback, function (load) {

@@ -7,7 +7,7 @@ export default class Header extends Component {
     state = {
         current: 'home',
     }
-    
+
     handleClick=(e)=>{ // 点击事件
         this.setState({current: e.key});
     }
@@ -32,6 +32,9 @@ export default class Header extends Component {
                     </Menu.Item>
                     <Menu.Item key="profile">
                         <Link to="/profile">Profile</Link>
+                    </Menu.Item>
+                    <Menu.Item key="tasks">
+                        <Link to="/tasks">Tasks</Link>
                     </Menu.Item>
                 </Menu>
             </ALayout.Header>

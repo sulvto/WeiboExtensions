@@ -1,6 +1,7 @@
 import React,{Component} from 'react';
 import { Route, Switch } from 'react-router-dom';
 import {Layout as ALayout} from 'antd';
+import './App.css';
 import Header from './Header'
 import Home from '../containers/Home'
 import My from '../containers/My'
@@ -9,6 +10,7 @@ import Detail from '../containers/Detail'
 import Graph from '../containers/Graph'
 import Follow from '../containers/Follow'
 import MyFollow from '../containers/MyFollow'
+import Tasks from '../containers/Tasks'
 
 const { Footer, Sider, Content } = ALayout;
 
@@ -25,6 +27,7 @@ export default class Layout extends Component {
                         <Route path='/profile' component={Profile} />
                         <Route path='/detail' component={Detail} />
                         <Route path='/myfollow' component={MyFollow} />
+                        <Route path='/tasks' component={Tasks} />
                         <Route path='/follow/:uid/:name' component={Follow} />
                         <Route path='/graph/:uid/:name' component={Graph} />
                     </Switch>

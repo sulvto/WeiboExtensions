@@ -1,5 +1,4 @@
 
-
 var baseUrl = 'https://weibo.com';
 
 function has_repost_node() {

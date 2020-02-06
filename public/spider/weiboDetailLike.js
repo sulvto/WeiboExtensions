@@ -1,5 +1,4 @@
 
-
 var baseUrl = 'https://weibo.com';
 
 function has_like_node() {
@@ -60,7 +59,6 @@ function reload() {
 }
 
 window.attemptedLoads = 0;
-
 
 function sendActive(data) {
     chrome.runtime.sendMessage({
