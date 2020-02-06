@@ -232,7 +232,73 @@ Job.prototype.removeAllTask = function () {
 };
 
 function Task(name) {
-    return {id: genTaskId(), createDate: new Date(), name}
+    this.id = genTaskId();
+    this.createDate = new Date();
+    this.name = name;
+    this.run = () => {};
+    this.onPauseCallback = () => {};
+    this.onResumeCallback = () => {};
+    this.onDoneCallback = () => {};
+
+    var defaultPauseListener = (status) => status === TASK_STATUS_PAUSE ? this.onPauseCallback() : null;
+    var defaultResumeListener = (status) => status === TASK_STATUS_RESUME ? this.onResumeCallback() : null;
+    var defaultDoneListener = (status) => status === TASK_STATUS_DONE ? this.onDoneCallback() : null;
+    this.listeners = [defaultPauseListener, defaultResumeListener, defaultDoneListener];
+}
+
+Task.prototype.setRun = (fun) => fun && (this.run = fun);
+
+Task.prototype.start = () => {
+    this.setStatus(TASK_STATUS_START);
+    this.run();
+}
+
+Task.prototype.pause = () => {
+    if (this.status === TASK_STATUS_START) {
+        this.setStatus(TASK_STATUS_PAUSE);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+Task.prototype.onPause = (callback) => {
+    this.onPauseCallback = callback;
+}
+
+Task.prototype.resume = () => {
+    if (this.status === TASK_STATUS_PAUSE) {
+        this.setStatus(TASK_STATUS_RESUME);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+Task.prototype.onResume = (callback) => {
+    this.onResumeCallback = callback;
+}
+
+Task.prototype.done = () => {
+    if (this.status === TASK_STATUS_START || this.status === TASK_STATUS_RESUME) {
+        this.setStatus(TASK_STATUS_DONE);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+Task.prototype.onDone = (callback) => {
+    this.onDoneCallback = callback;
+}
+
+Task.prototype.setStatus = (status) => {
+    this.status = status;
+    this.listeners.filter((listener) => listener ).forEach((listener) => listener(status));
+}
+
+Task.prototype.addStatusListener = (listener) => {
+    this.listeners[this.listeners.length] = listener;
 }
 
 function getTask(taskId) {
@@ -909,8 +975,6 @@ function createSpiderDetailLikeCall() {
 }
 
 function createWeiboMyfollowTask() {
-    var task = new Task(0);
-    tasks.add(task);
 
     return {
         name: CALL_NAME_TASK_WEIBO_MYFOLLOW,
@@ -918,14 +982,17 @@ function createWeiboMyfollowTask() {
         params: null,
         callback: null,
         fun: function() {
-            callRequest(CALL_NAME_SPIDER_MYFOLLOW, task, { uid: this.params.uid }, this.callback);
+            var task = new Task(CALL_NAME_TASK_WEIBO_MYFOLLOW);
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_MYFOLLOW, this.task, { uid: this.params.uid }, this.callback))
+            task.start();
+            tasks.add(task);
+            this.task = task;
+            this.taskFun();
         }
     }
 }
 
 function createWeiboFollowTask() {
-    var task = new Task(0);
-    tasks.add(task);
 
     return {
         name: CALL_NAME_TASK_WEIBO_FOLLOW,
@@ -933,14 +1000,17 @@ function createWeiboFollowTask() {
         params: null,
         callback: null,
         fun: function() {
-            callRequest(CALL_NAME_SPIDER_FOLLOW, task, { uid: this.params.uid }, this.callback);
+            var task = new Task(CALL_NAME_TASK_WEIBO_FOLLOW);
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_FOLLOW, this.task, { uid: this.params.uid }, this.callback));
+            task.start();
+            tasks.add(task);
+            this.task = task;
+            this.taskFun();
         }
     }
 }
 
 function createWeiboProfileTask() {
-    var task = new Task(0);
-    tasks.add(task);
 
     return {
         name: CALL_NAME_TASK_WEIBO_PROFILE,
@@ -948,14 +1018,17 @@ function createWeiboProfileTask() {
         params: null,
         callback: null,
         fun: function() {
-            callRequest(CALL_NAME_SPIDER_PROFILE, task, { uid: this.params.uid }, this.callback);
+            var task = new Task(CALL_NAME_TASK_WEIBO_PROFILE);
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_PROFILE, this.task, { uid: this.params.uid }, this.callback));
+            task.start();
+            tasks.add(task);
+            this.task = task;
+            this.taskFun();
         }
     }
 }
 
 function createWeiboDetailTask() {
-    var task = new Task(0);
-    tasks.add(task);
 
     return {
         name: CALL_NAME_TASK_WEIBO_DETAIL,
@@ -963,7 +1036,12 @@ function createWeiboDetailTask() {
         params: null,
         callback: null,
         fun: function() {
-            callRequest(CALL_NAME_SPIDER_DETAIL, task, { uid: this.params.uid }, this.callback);
+            var task = new Task(CALL_NAME_TASK_WEIBO_DETAIL);
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_DETAIL, this.task, { uid: this.params.uid }, this.callback));
+            task.start();
+            tasks.add(task);
+            this.task = task;
+            this.taskFun();
         }
     }
 }
@@ -975,15 +1053,18 @@ function createInervalWeiboDetailTask() {
         task: null,
         params: null,
         callback: null,
-        taskFun: () => {
-            var that = this;
-            var task = this.task;
-            this.task.intervalID = setInterval(()=> {
-                callRequest(CALL_NAME_SPIDER_DETAIL, task, { uid: this.params.uid }, that.callback);
-            }, this.params.delay);
-        },
         fun: function() {
-            var task = new Task(0);
+            var task = new Task(CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL);
+            task.setRun(() => {
+                var that = this;
+                var task = this.task;
+                this.task.intervalID = setInterval(()=> {
+                    callRequest(CALL_NAME_SPIDER_DETAIL, task, { uid: this.params.uid }, that.callback);
+                }, this.params.delay);
+            });
+            task.onPause(() => clearInterval(this.task.intervalID));
+            task.onResume(() => task.run());
+            task.start();
             tasks.add(task);
             this.task = task;
             this.taskFun();

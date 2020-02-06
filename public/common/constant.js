@@ -1,3 +1,8 @@
+const TASK_STATUS_START = 1;
+const TASK_STATUS_PAUSE = 2;
+const TASK_STATUS_RESUME = 3;
+const TASK_STATUS_DONE = 4;
+
 const CALL_NAME_CACHE_GET = 'cache.get';
 const CALL_NAME_CACHE_PUT = 'cache.put';
 
