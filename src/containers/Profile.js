@@ -1,5 +1,6 @@
 import React from 'react';
 import { Layout, Menu, Breadcrumb, Table, Divider, Avatar } from 'antd';
+import { Link } from 'react-router-dom';
 import { profile } from '../services/spiderApi';
 
 const columns = [
@@ -40,6 +41,8 @@ const columns = [
       render: (text, record) => (
         <span>
           <a target="_blink" href={record.url}>查看微博内容</a>
+        <Divider type="vertical" />
+        <Link to={`/trend/${record.uid}/${record.rid}`}>查看趋势</Link>
         </span>
       ),
   },
@@ -55,8 +58,9 @@ const columns = [
 
     componentDidMount() {
         var that = this;
-        profile('2619074643', function(result) {
-            console.log('target', result);
+        let uid = this.props.match.params.uid;
+
+        profile(uid, function(result) {
             that.setState({data: result});
         });
     }

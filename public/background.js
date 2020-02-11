@@ -231,75 +231,80 @@ Job.prototype.removeAllTask = function () {
     this.tasks = [];
 };
 
-function Task(name) {
-    this.id = genTaskId();
-    this.createDate = new Date();
-    this.name = name;
-    this.run = () => {};
-    this.onPauseCallback = () => {};
-    this.onResumeCallback = () => {};
-    this.onDoneCallback = () => {};
+class Task {
+    constructor(name, id) {
+        this.id = id || genTaskId();
+        this.createDate = new Date();
+        this.name = name;
+        this.run = () => {};
+        this.onPauseCallback = () => {};
+        this.onResumeCallback = () => {};
+        this.onDoneCallback = () => {};
 
-    var defaultPauseListener = (status) => status === TASK_STATUS_PAUSE ? this.onPauseCallback() : null;
-    var defaultResumeListener = (status) => status === TASK_STATUS_RESUME ? this.onResumeCallback() : null;
-    var defaultDoneListener = (status) => status === TASK_STATUS_DONE ? this.onDoneCallback() : null;
-    this.listeners = [defaultPauseListener, defaultResumeListener, defaultDoneListener];
-}
+        var defaultPauseListener = (status) => status === TASK_STATUS_PAUSE ? this.onPauseCallback() : null;
+        var defaultResumeListener = (status) => status === TASK_STATUS_RESUME ? this.onResumeCallback() : null;
+        var defaultDoneListener = (status) => status === TASK_STATUS_DONE ? this.onDoneCallback() : null;
+        this.listeners = [defaultPauseListener, defaultResumeListener, defaultDoneListener];
+    }
 
-Task.prototype.setRun = (fun) => fun && (this.run = fun);
+    setRun(fun) {
+        fun && (this.run = fun);
+    }
 
-Task.prototype.start = () => {
-    this.setStatus(TASK_STATUS_START);
-    this.run();
-}
+    start() {
+        this.setStatus(TASK_STATUS_START);
+        this.run();
+    }
 
-Task.prototype.pause = () => {
-    if (this.status === TASK_STATUS_START) {
-        this.setStatus(TASK_STATUS_PAUSE);
-        return true;
-    } else {
-        return false;
+    pause() {
+        if (this.status === TASK_STATUS_START) {
+            this.setStatus(TASK_STATUS_PAUSE);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    onPause(callback) {
+        this.onPauseCallback = callback;
+    }
+
+    resume() {
+        if (this.status === TASK_STATUS_PAUSE) {
+            this.setStatus(TASK_STATUS_RESUME);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    onResume(callback) {
+        this.onResumeCallback = callback;
+    }
+
+    done() {
+        if (this.status === TASK_STATUS_START || this.status === TASK_STATUS_RESUME) {
+            this.setStatus(TASK_STATUS_DONE);
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    onDone(callback) {
+        this.onDoneCallback = callback;
+    }
+
+    setStatus(status) {
+        this.status = status;
+        this.listeners.filter((listener) => listener ).forEach((listener) => listener(status));
+    }
+
+    addStatusListener(listener) {
+        this.listeners[this.listeners.length] = listener;
     }
 }
 
-Task.prototype.onPause = (callback) => {
-    this.onPauseCallback = callback;
-}
-
-Task.prototype.resume = () => {
-    if (this.status === TASK_STATUS_PAUSE) {
-        this.setStatus(TASK_STATUS_RESUME);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-Task.prototype.onResume = (callback) => {
-    this.onResumeCallback = callback;
-}
-
-Task.prototype.done = () => {
-    if (this.status === TASK_STATUS_START || this.status === TASK_STATUS_RESUME) {
-        this.setStatus(TASK_STATUS_DONE);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-Task.prototype.onDone = (callback) => {
-    this.onDoneCallback = callback;
-}
-
-Task.prototype.setStatus = (status) => {
-    this.status = status;
-    this.listeners.filter((listener) => listener ).forEach((listener) => listener(status));
-}
-
-Task.prototype.addStatusListener = (listener) => {
-    this.listeners[this.listeners.length] = listener;
-}
 
 function getTask(taskId) {
     for (var i = 0; i < jobs.length; i++) {
@@ -459,77 +464,6 @@ function popupStop(job) {
 }
 
 /**
- *  Start spidering one page.
- *
- * @param {Job} job
- */
-function spiderPage(job) {
-
-    if (taskCount() > TASK_LIMIT) {
-
-        setTimeout(function () {
-            spiderPage(job)
-        }, 1000);
-
-        checkTasks();
-
-        return;
-    }
-
-    var task = new Task(job.id);
-    job.tasks.push(task);
-    var currentRequest = {
-        requestedURL: null,
-        returnedURL: null,
-        referrer: null
-    };
-
-    task.currentRequest = currentRequest;
-
-    if (job.paused) {
-        return;
-    }
-    setStatus('Next page...', job);
-
-    // Pull one page URL out of the todo list.
-    var url;
-    for (url in job.pagesTodo) {
-        break;
-    }
-    if (!url) {
-        // Done.
-        setStatus('Complete', job);
-        popupStop();
-        return;
-    }
-    // Record page details.
-    currentRequest.referrer = job.pagesTodo[url];
-    currentRequest.requestedURL = url;
-    task.url = url;
-    job.spidering[url] = true;
-    delete job.pagesTodo[url];
-
-    // Fetch this page using Ajax.
-    setStatus('Prefetching ' + url, job);
-    job.httpRequestWatchDogPid = window.setTimeout(function () {
-        httpRequestWatchDog(task);
-    }, HEAD_REQUEST_TIMEOUT);
-
-    var httpRequest = new XMLHttpRequest();
-    task.httpRequest = httpRequest;
-
-    httpRequest.onreadystatechange = function () {
-        httpRequestChange(task);
-    };
-    httpRequest.open('GET', url, false);
-    // For some reason this request only works intermitently when called directly.
-    // Delay request by 1ms.
-    window.setTimeout(function () {
-        httpRequest.send(null);
-    }, 1);
-}
-
-/**
  * Terminate an http request that hangs.
  */
 function httpRequestWatchDog(task) {
@@ -641,6 +575,11 @@ function httpRequestChange(task) {
  */
 function spiderLoad(task, url, spiderFile) {
     console.log('spiderLoad url->', url);
+
+    if (url.match('http[s]?:\/\/([^\.]\.)?[^\.]+\.[^\/]+\/sorry.*')) {
+        return;
+    }
+
     chrome.tabs.create({
         url: url,
         selected: true
@@ -921,7 +860,7 @@ function createSpiderProfileCall() {
         params: null,
         callback: null,
         fun: function() {
-            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/u/${this.params.uid}`, 'spider/weiboProfile.js');
+            spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/u/${this.params.uid}?refer_flag=0000015010_&from=feed&loc=nickname&is_all=1`, 'spider/weiboProfile.js');
         }
     };
 }
@@ -933,6 +872,9 @@ function createSpiderDetailCall() {
         params: null,
         callback: null,
         fun: function() {
+            // reset callback
+            let callback = this.callback;
+            this.callback = (data) => callback(data[0]);
             spiderLoadBaseCallFun.call(this, this.params.url || `https://weibo.com/${this.params.uid}/${this.params.rid}`, 'spider/weiboDetail.js');
         }
     };
@@ -983,11 +925,10 @@ function createWeiboMyfollowTask() {
         callback: null,
         fun: function() {
             var task = new Task(CALL_NAME_TASK_WEIBO_MYFOLLOW);
-            task.setRun(() => callRequest(CALL_NAME_SPIDER_MYFOLLOW, this.task, { uid: this.params.uid }, this.callback))
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_MYFOLLOW, task, { uid: this.params.uid }, (data)=> this.callback(data) && tasks.remove(task.id)))
             task.start();
             tasks.add(task);
             this.task = task;
-            this.taskFun();
         }
     }
 }
@@ -1001,11 +942,10 @@ function createWeiboFollowTask() {
         callback: null,
         fun: function() {
             var task = new Task(CALL_NAME_TASK_WEIBO_FOLLOW);
-            task.setRun(() => callRequest(CALL_NAME_SPIDER_FOLLOW, this.task, { uid: this.params.uid }, this.callback));
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_FOLLOW, task, { uid: this.params.uid }, (data)=> this.callback(data) && tasks.remove(task.id)));
             task.start();
             tasks.add(task);
             this.task = task;
-            this.taskFun();
         }
     }
 }
@@ -1019,11 +959,10 @@ function createWeiboProfileTask() {
         callback: null,
         fun: function() {
             var task = new Task(CALL_NAME_TASK_WEIBO_PROFILE);
-            task.setRun(() => callRequest(CALL_NAME_SPIDER_PROFILE, this.task, { uid: this.params.uid }, this.callback));
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_PROFILE, task, { uid: this.params.uid }, (data)=> this.callback(data) && tasks.remove(task.id)));
             task.start();
             tasks.add(task);
             this.task = task;
-            this.taskFun();
         }
     }
 }
@@ -1037,11 +976,10 @@ function createWeiboDetailTask() {
         callback: null,
         fun: function() {
             var task = new Task(CALL_NAME_TASK_WEIBO_DETAIL);
-            task.setRun(() => callRequest(CALL_NAME_SPIDER_DETAIL, this.task, { uid: this.params.uid }, this.callback));
+            task.setRun(() => callRequest(CALL_NAME_SPIDER_DETAIL, task, { uid: this.params.uid }, (data)=> this.callback(data) && tasks.remove(task.id)));
             task.start();
             tasks.add(task);
             this.task = task;
-            this.taskFun();
         }
     }
 }
@@ -1054,20 +992,77 @@ function createInervalWeiboDetailTask() {
         params: null,
         callback: null,
         fun: function() {
-            var task = new Task(CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL);
-            task.setRun(() => {
-                var that = this;
-                var task = this.task;
-                this.task.intervalID = setInterval(()=> {
-                    callRequest(CALL_NAME_SPIDER_DETAIL, task, { uid: this.params.uid }, that.callback);
-                }, this.params.delay);
-            });
-            task.onPause(() => clearInterval(this.task.intervalID));
-            task.onResume(() => task.run());
-            task.start();
+            if (this.params.uid && this.params.rid && this.params.delay) {
+                let taskId = `${CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL}.${this.params.uid}.${this.params.rid}.${this.params.delay}`;
+                let task = tasks.find(taskId);
+                if (task) {
+                    // TODO: ??
+                } else {
+                    task = new Task(CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL, taskId);
+                    tasks.add(task);
+
+                    let callParams = { uid: this.params.uid, rid: this.params.rid };
+
+                    let callback = this.callback;
+
+                    let callFun = () => {
+                        console.log('CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL callFun', task);
+                        callRequest(CALL_NAME_SPIDER_DETAIL, task, callParams, callback);
+                    }
+
+                    task.setRun(() => {
+                        console.log('CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL run ');
+                        callFun();
+                        task.intervalID = setInterval(() => callFun(), this.params.delay);
+                    });
+                    task.onPause(() => clearInterval(task.intervalID));
+                    task.onResume(() => task.run());
+                    task.onDone(() => clearInterval(task.intervalID));
+                    task.start();
+                    this.task = task;
+                }
+            } else {
+                console.error(CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL, 'params error');
+            }
+        }
+    }
+}
+
+
+function createCacheInervalWeiboDetailTask() {
+
+    return {
+        name: CALL_NAME_TASK_CACHE_INTERVAL_WEIBO_DETAIL,
+        task: null,
+        params: null,
+        callback: null,
+        fun: function() {
+            let task = new Task(CALL_NAME_TASK_CACHE_INTERVAL_WEIBO_DETAIL);
             tasks.add(task);
+            var that = this;
+            let cacheName = `${CALL_NAME_TASK_CACHE_INTERVAL_WEIBO_DETAIL}.${this.params.rid}`;
+            task.setRun(() => {
+    
+                let cacheData = CACHE.get(cacheName);
+                if (cacheData) {
+                    that.callback(cacheData);
+                } else {
+                    callRequest(CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL, null, { uid: that.params.uid, rid: that.params.rid, delay: that.params.delay }, (detailData) => {
+                        let time = new Date().getTime();
+                        let data = CACHE.get(cacheName);
+                        if (!data) {
+                            data = {};
+                        }
+                        data[time] = detailData;
+                        CACHE.put(cacheName, data, null);
+                    });
+
+                    that.callback([]);
+                }
+                tasks.remove(task.id);
+            });
+            task.start();
             this.task = task;
-            this.taskFun();
         }
     }
 }
@@ -1082,7 +1077,7 @@ function createWeiboDetailRepostTask() {
         params: null,
         callback: null,
         fun: function() {
-            callRequest(CALL_NAME_SPIDER_DETAIL_REPOST, task, { uid: this.params.uid }, this.callback);
+            callRequest(CALL_NAME_SPIDER_DETAIL_REPOST, task, { uid: this.params.uid }, (data)=> this.callback(data) && tasks.remove(task.id));
         }
     }
 }
@@ -1097,7 +1092,7 @@ function createWeiboDetailCommentTask() {
         params: null,
         callback: null,
         fun: function() {
-            callRequest(CALL_NAME_SPIDER_DETAIL_COMMENT, task, { uid: this.params.uid }, this.callback);
+            callRequest(CALL_NAME_SPIDER_DETAIL_COMMENT, task, { uid: this.params.uid }, (data)=> this.callback(data) && tasks.remove(task.id));
         }
     }
 }
@@ -1265,21 +1260,6 @@ function recordSkip(req) {
     });
 }
 
-/**
- * Set the current status message to the views tab.
- * Print count of number of items left in queue.
- * @param {string} msg Status message.
- * @param {Job} job Status message.
- */
-function setStatus(msg, job) {
-    console.log(msg);
-    if (job.started) {
-        job.status = msg;
-        job.storeJob();
-    }
-}
-
-
 // Init
 
 var event_listeners = new EventListenerList();
@@ -1297,10 +1277,11 @@ CALL_TABLES[CALL_NAME_SPIDER_DETAIL_COMMENT] = createSpiderDetailCommentCall();
 CALL_TABLES[CALL_NAME_SPIDER_DETAIL_LIKE] = createSpiderDetailLikeCall();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_MYFOLLOW] = createWeiboMyfollowTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_FOLLOW] = createWeiboFollowTask();
-CALL_TABLES[CALL_NAME_TASK_WEIBO_MYFOLLOW] = createWeiboMyfollowTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_PROFILE] = createWeiboProfileTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL] = createWeiboDetailTask();
+
 CALL_TABLES[CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL] = createInervalWeiboDetailTask();
+CALL_TABLES[CALL_NAME_TASK_CACHE_INTERVAL_WEIBO_DETAIL] = createCacheInervalWeiboDetailTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_REPOST] = createWeiboDetailRepostTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_COMMENT] = createWeiboDetailCommentTask();
 CALL_TABLES[CALL_NAME_TASK_WEIBO_DETAIL_LIKE] = createWeiboDetailLikeTask();

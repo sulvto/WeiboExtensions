@@ -27,6 +27,7 @@ const CALL_NAME_TASK_WEIBO_PROFILE = 'task.weibo.profile';
 
 const CALL_NAME_TASK_WEIBO_DETAIL = 'task.weibo.detail';
 const CALL_NAME_TASK_INTERVAL_WEIBO_DETAIL = 'task.interval.weibo.detail';
+const CALL_NAME_TASK_CACHE_INTERVAL_WEIBO_DETAIL = 'task.cache.interval.weibo.detail';
 const CALL_NAME_TASK_WEIBO_DETAIL_REPOST = 'task.weibo.detail.repost';
 const CALL_NAME_TASK_WEIBO_DETAIL_COMMENT = 'task.weibo.detail.comment';
 const CALL_NAME_TASK_WEIBO_DETAIL_LIKE = 'task.weibo.detail.like';

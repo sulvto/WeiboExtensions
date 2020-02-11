@@ -10,6 +10,7 @@ import Detail from '../containers/Detail'
 import Graph from '../containers/Graph'
 import Follow from '../containers/Follow'
 import MyFollow from '../containers/MyFollow'
+import DetailTrend from '../containers/DetailTrend'
 import Tasks from '../containers/Tasks'
 
 const { Footer, Sider, Content } = ALayout;
@@ -24,12 +25,13 @@ export default class Layout extends Component {
                     <Switch>
                         <Route path='/' component={Home} exact />
                         <Route path='/my' component={My} />
-                        <Route path='/profile' component={Profile} />
                         <Route path='/detail' component={Detail} />
                         <Route path='/myfollow' component={MyFollow} />
                         <Route path='/tasks' component={Tasks} />
+                        <Route path='/profile/:uid' component={Profile} />
                         <Route path='/follow/:uid/:name' component={Follow} />
                         <Route path='/graph/:uid/:name' component={Graph} />
+                        <Route path='/trend/:uid/:rid' component={DetailTrend} />
                     </Switch>
                 </div>
             </Content>

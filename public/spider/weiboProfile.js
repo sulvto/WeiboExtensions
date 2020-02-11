@@ -17,12 +17,14 @@ function get_node_result(node) {
     return {
         date: dateNode ? dateNode.getAttribute('title') : '',
         url: dateNode ? baseUrl + dateNode.getAttribute('href') : '',
+        uid: dateNode ? dateNode.getAttribute('href').match(/\/([\d]+)\/[^/^?]+/)[1] : '',
+        rid: dateNode ? dateNode.getAttribute('href').match(/\/[\d]+\/([^/^?]+)/)[1] : '',
         feedContent : contentNode ? contentNode.innerHTML : '',
         expandUrl: expandANode ? baseUrl + expandANode.getAttribute('href') : null,
         from: fromNode ? fromNode.innerText : '',
-        forward: forwardNode ? forwardNode.innerText : '',
-        comment: commentNode ? commentNode.innerText : '',
-        like: likeNode ? likeNode.innerText : ''
+        forward: forwardNode ? Number.parseInt(forwardNode.innerText) || 0 : '',
+        comment: commentNode ? Number.parseInt(commentNode.innerText) || 0 : '',
+        like: likeNode ? Number.parseInt(likeNode.innerText) || 0 : ''
     }
 }
 

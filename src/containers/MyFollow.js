@@ -40,6 +40,8 @@ const columns = [
                 <Divider type="vertical" />
                 <Link to={`/follow/${record.uid}/${record.name}`}>查看关注</Link>
                 <Divider type="vertical" />
+                <Link to={`/profile/${record.uid}`}>查看最新微博</Link>
+                <Divider type="vertical" />
                 <Link to={`/graph/${record.uid}/${record.name}`}>查看关注图谱</Link>
             </span>
           }

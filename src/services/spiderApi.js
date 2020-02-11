@@ -1,6 +1,6 @@
 
 import { sendCallMessage } from './common'
-import { getCache } from './cacheApi'
+import { getCache, putCache } from './cacheApi'
 
 export function myfollow(uid, callback) {
     getCache(`task.weibo.myfollow.${uid}`, callback, function (load) {
@@ -56,4 +56,10 @@ export function detailLike(uid, callback) {
             load(data);
         });
     })
+}
+
+export function detailTrend(uid, rid, callback) {
+    let delay = 1000 * 60 * 2;
+
+    sendCallMessage('task.cache.interval.weibo.detail', {uid, rid, delay }, callback);
 }

@@ -30,8 +30,8 @@ export default class Header extends Component {
                     <Menu.Item key="myfollow">
                         <Link to="/myfollow">MyFollow</Link>
                     </Menu.Item>
-                    <Menu.Item key="profile">
-                        <Link to="/profile">Profile</Link>
+                    <Menu.Item key="trend">
+                        <Link to="/trend/1686546714/ItGTTsfnA">Trend</Link>
                     </Menu.Item>
                     <Menu.Item key="tasks">
                         <Link to="/tasks">Tasks</Link>
